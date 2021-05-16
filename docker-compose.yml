@@ -4,8 +4,35 @@ services:
         build: ./api
         networks:
             - todo
-    # rabbitmq:
-    #     image: rabbitmq:3-management-alpine
+    send:
+        build: ./send
+        depends_on: 
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo
+    receive:
+        build: ./receive
+        depends_on: 
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo
+    rabbitmq:
+        image: rabbitmq:3-management-alpine
+        volumes:
+            - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+            - ./rabbitmq/logs:/var/log/rabbitmq/log
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        networks:
+            - todo
     proxy:
         image: haproxy:2.3-alpine
         depends_on: 
