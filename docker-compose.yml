@@ -2,10 +2,6 @@ version: "3.9"
 services:
     hello:
         build: ./api
-        ports: 
-            - 8080
-        environment:
-            - SERVICE_PORTS=8080
         networks:
             - todo
     # rabbitmq:
