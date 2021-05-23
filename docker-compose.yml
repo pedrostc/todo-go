@@ -4,28 +4,28 @@ services:
         build: ./api
         networks:
             - todo
-    send:
-        build: ./send
+    post-todo:
+        build: ./write-controller
         depends_on: 
             rabbitmq:
                 condition: service_healthy
         networks:
             - todo
-    receive:
-        build: ./receive
-        depends_on: 
-            rabbitmq:
-                condition: service_healthy
-        networks:
-            - todo
+    # receive:
+    #     build: ./receive
+    #     depends_on: 
+    #         rabbitmq:
+    #             condition: service_healthy
+    #     networks:
+    #         - todo
     rabbitmq:
         image: rabbitmq:3-management-alpine
         volumes:
             - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
             - ./rabbitmq/logs:/var/log/rabbitmq/log
         ports:
-            - "5672:5672"
-            - "15672:15672"
+            - 5672:5672
+            - 15672:15672
         healthcheck:
             test: ["CMD", "rabbitmq-diagnostics", "ping"]
             interval: 30s
@@ -37,13 +37,45 @@ services:
         image: haproxy:2.3-alpine
         depends_on: 
             - hello
+            - mongo-express
+            - post-todo
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
             - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
         ports:
-            - 81:80
+            - 80:80
         networks:
             - todo
+    mongo:
+        image: mongo
+        restart: always
+        environment:
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: example
+        volumes: 
+            - /c/data/mongo/todo-go:/data/db
+        networks:
+            - todo
+        healthcheck:
+            test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+            interval: 30s
+            timeout: 10s
+            retries: 5        
+    mongo-express:
+        image: mongo-express
+        restart: always
+        depends_on: 
+            mongo:
+                condition: service_healthy
+        ports:
+            - 8081:8081
+        environment:
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: example
+            ME_CONFIG_SITE_BASEURL: /admin/mongo
+        networks:
+            - todo
+        
 volumes:
     logvolume01: {}
 
