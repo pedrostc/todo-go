@@ -4,6 +4,6 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go get -d -v ./...
-RUN go install -v ./read-controller.go
+RUN go install -v ./post-controller.go
 
-CMD ["read-controller"]
+CMD ["post-controller"]

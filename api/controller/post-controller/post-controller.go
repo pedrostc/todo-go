@@ -5,11 +5,22 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-
+	"encoding/json"
 	"github.com/gorilla/mux"
 
 	"github.com/streadway/amqp"
 )
+
+
+type Todo struct {
+	Id string
+	Text string
+	Done string
+}
+
+func (todo Todo) isEmpty() bool {
+	return todo.Id == "" && todo.Text == "" && todo.Done == ""
+}
 
 func main() {
 	fmt.Printf("Starting the amazing API to post TODOs\n")
@@ -37,7 +48,6 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("in the GET\n")
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
@@ -54,18 +64,21 @@ func failOnError(err error, msg string) {
 }
 
 func postTodo(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("in the POST\n")
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
 		return
 	}
 
-	fmt.Printf("REALLY in the POST\n")
-
-	log.Printf("request receive", r.Host, r.Method, r.RequestURI)
-
 	reqBody, _ := ioutil.ReadAll(r.Body)
+
+	var dadosJson Todo
+	json.Unmarshal(reqBody, &dadosJson) 
+	
+	if (dadosJson.isEmpty()) {
+		http.Error(w, "Something went wrong while parsing the JSON from the request body.", http.StatusUnprocessableEntity)
+		return
+	}
 
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")

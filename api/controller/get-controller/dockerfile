@@ -4,6 +4,6 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go get -d -v ./...
-RUN go install -v ./write-controller.go
+RUN go install -v ./get-controller.go
 
-CMD ["write-controller"]
+CMD ["get-controller"]
