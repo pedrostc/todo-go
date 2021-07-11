@@ -1,11 +1,13 @@
 package main
 
 import (
-	"log"
 	"context"
+	"encoding/json"
+	"log"
+
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
-
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func failOnError(err error, msg string) {
@@ -14,13 +16,38 @@ func failOnError(err error, msg string) {
 	}
 }
 
+var collection *mongo.Collection
+var ctx = context.TODO()
 
+type Todo struct {
+	Id   string
+	Text string
+	Done string
+}
+
+func init() {
+
+	// var cred options.Credential
+
+	// cred.AuthSource = "admin"
+	// cred.Username = os.Getenv("MONGO_INITDB_ROOT_USERNAME")
+	// cred.Password = os.Getenv("MONGO_INITDB_ROOT_PASSWORD")
+
+	clientOptions := options.Client().ApplyURI("mongodb://root:example@mongo:27017/todoDB?authSource=admin")
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	collection = client.Database("todoDB").Collection("todos")
+}
 
 func main() {
-
-
-	var collection *mongo.Collection
-	var ctx = context.TODO()
 
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
@@ -32,11 +59,11 @@ func main() {
 
 	q, err := ch.QueueDeclare(
 		"post", // name
-		false,   // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		false,  // durable
+		false,  // delete when unused
+		false,  // exclusive
+		false,  // no-wait
+		nil,    // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
@@ -56,9 +83,21 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
+
+			var todoJson Todo
+			json.Unmarshal(d.Body, &todoJson)
+			err = insertTodo(todoJson)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}()
 
-	log.Printf(" [*] Waiting for messages. To exit press CTRL+C")
+	log.Printf("Listening for todos...")
 	<-forever
+}
+
+func insertTodo(todo Todo) error {
+	_, err := collection.InsertOne(ctx, todo)
+	return err
 }
