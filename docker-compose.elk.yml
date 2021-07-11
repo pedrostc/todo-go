@@ -39,7 +39,7 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock
             - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
         environment:
-            - ELASTICSEARCH_HOST=es01:9200
+            - ELASTICSEARCH_HOST=es01
         # disable strict permission checks
         command: ["--strict.perms=false"]
         depends_on: 
