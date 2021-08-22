@@ -4,6 +4,6 @@ WORKDIR /go/src/app
 COPY . .
 
 RUN go get -d -v ./...
-RUN go install -v ./dao.go
+RUN go install -v ./get-dao.go
 
-CMD ["dao"]
+CMD ["get-dao"]

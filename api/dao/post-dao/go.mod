@@ -1,4 +1,4 @@
-module todo-go-dao
+module todo-go-post-dao
 
 go 1.16
 

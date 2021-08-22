@@ -11,8 +11,15 @@ services:
                 condition: service_healthy
         networks:
             - todo
-    dao:
-        build: ./api/dao
+    get-todo:
+        build: ./api/controller/get-controller
+        depends_on: 
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo            
+    post-dao:
+        build: ./api/dao/post-dao
         depends_on: 
             mongo:
                 condition: service_healthy
@@ -20,6 +27,15 @@ services:
                 condition: service_healthy
         networks:
             - todo
+    get-dao:
+        build: ./api/dao/get-dao
+        depends_on: 
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo            
     rabbitmq:
         image: rabbitmq:3-management-alpine
         volumes:
