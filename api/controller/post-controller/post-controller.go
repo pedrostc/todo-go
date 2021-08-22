@@ -1,19 +1,19 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"encoding/json"
+
 	"github.com/gorilla/mux"
 
 	"github.com/streadway/amqp"
 )
 
-
 type Todo struct {
-	Id string
+	Id   string
 	Text string
 	Done string
 }
@@ -73,9 +73,9 @@ func postTodo(w http.ResponseWriter, r *http.Request) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 
 	var dadosJson Todo
-	json.Unmarshal(reqBody, &dadosJson) 
-	
-	if (dadosJson.isEmpty()) {
+	json.Unmarshal(reqBody, &dadosJson)
+
+	if dadosJson.isEmpty() {
 		http.Error(w, "Something went wrong while parsing the JSON from the request body.", http.StatusUnprocessableEntity)
 		return
 	}
