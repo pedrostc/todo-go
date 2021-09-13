@@ -41,8 +41,8 @@ services:
     get-dao:
         build: ./api/dao/get-dao    
         environment:
-            INBOUND_QUEUE_NAME: get
-            OUTBOUND_QUEUE_NAME: get
+            GETDAO_INBOUNDQUEUENAME: get
+            GETDAO_OUTBOUNDQUEUENAME: get
         deploy:
             restart_policy:
                 condition: always

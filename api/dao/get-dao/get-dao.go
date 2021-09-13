@@ -5,17 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-const InboundQueueVar = "INBOUND_QUEUE_NAME"
-const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -30,6 +27,11 @@ type Todo struct {
 	Id   string `bson:"id"`
 	Text string `bson:"text"`
 	Done string `bson:"done"`
+}
+
+type SvcConfiguration struct {
+	InboundQueueName  string
+	OutboundQueueName string
 }
 
 func init() {
@@ -56,6 +58,11 @@ func init() {
 
 func main() {
 
+	var c SvcConfiguration
+	err := envconfig.Process("getdao", &c)
+
+	failOnError(err, "There was a problem loading the service configs.")
+
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -65,12 +72,12 @@ func main() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		os.Getenv(InboundQueueVar), // name
-		false,                      // durable
-		false,                      // delete when unused
-		false,                      // exclusive
-		false,                      // no-wait
-		nil,                        // arguments
+		c.InboundQueueName, // name
+		false,              // durable
+		false,              // delete when unused
+		false,              // exclusive
+		false,              // no-wait
+		nil,                // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
