@@ -6,6 +6,8 @@ services:
             - todo
     post-todo:
         build: ./api/controller/post-controller
+        environment:
+            OUTBOUND_QUEUE_NAME: post
         depends_on: 
             rabbitmq:
                 condition: service_healthy
@@ -13,6 +15,9 @@ services:
             - todo
     get-todo:
         build: ./api/controller/get-controller
+        environment:
+            INBOUND_QUEUE_NAME: get-lalala
+            OUTBOUND_QUEUE_NAME: get
         depends_on: 
             rabbitmq:
                 condition: service_healthy
@@ -20,6 +25,12 @@ services:
             - todo            
     post-dao:
         build: ./api/dao/post-dao
+        environment:
+            INBOUND_QUEUE_NAME: post
+        deploy:
+            restart_policy:
+                condition: always
+                delay: 3s
         depends_on: 
             mongo:
                 condition: service_healthy
@@ -28,7 +39,14 @@ services:
         networks:
             - todo
     get-dao:
-        build: ./api/dao/get-dao
+        build: ./api/dao/get-dao    
+        environment:
+            INBOUND_QUEUE_NAME: get
+            OUTBOUND_QUEUE_NAME: get
+        deploy:
+            restart_policy:
+                condition: always
+                delay: 1s
         depends_on: 
             mongo:
                 condition: service_healthy
