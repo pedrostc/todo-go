@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"os"
 
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,6 +19,8 @@ func failOnError(err error, msg string) {
 
 var collection *mongo.Collection
 var ctx = context.TODO()
+
+const inboudQueueNameVar = "INBOUND_QUEUE_NAME"
 
 type Todo struct {
 	Id   string
@@ -57,24 +60,26 @@ func main() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
+	var inboundQueueName = os.Getenv(inboudQueueNameVar)
+
 	q, err := ch.QueueDeclare(
-		"post", // name
-		false,  // durable
-		false,  // delete when unused
-		false,  // exclusive
-		false,  // no-wait
-		nil,    // arguments
+		inboundQueueName, // name
+		false,            // durable
+		false,            // delete when unused
+		false,            // exclusive
+		false,            // no-wait
+		nil,              // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		q.Name,     // queue
+		"post-dao", // consumer
+		true,       // auto-ack
+		false,      // exclusive
+		false,      // no-local
+		false,      // no-wait
+		nil,        // args
 	)
 	failOnError(err, "Failed to register a consumer")
 

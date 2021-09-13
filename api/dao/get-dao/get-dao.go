@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 
 	"github.com/streadway/amqp"
@@ -12,6 +13,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+const InboundQueueVar = "INBOUND_QUEUE_NAME"
+const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -61,12 +65,12 @@ func main() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"get", // name
-		false, // durable
-		false, // delete when unused
-		false, // exclusive
-		false, // no-wait
-		nil,   // arguments
+		os.Getenv(InboundQueueVar), // name
+		false,                      // durable
+		false,                      // delete when unused
+		false,                      // exclusive
+		false,                      // no-wait
+		nil,                        // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
 
@@ -78,13 +82,13 @@ func main() {
 	failOnError(err, "Failed to set QoS")
 
 	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
+		q.Name,    // queue
+		"get-dao", // consumer
+		false,     // auto-ack
+		false,     // exclusive
+		false,     // no-local
+		false,     // no-wait
+		nil,       // args
 	)
 	failOnError(err, "Failed to register a consumer")
 

@@ -6,11 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 
 	"github.com/streadway/amqp"
 )
+
+const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
 
 type Todo struct {
 	Id   string
@@ -42,6 +45,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do stuff here
 		log.Println(r.RequestURI)
+		log.Println(r.RemoteAddr)
 		// Call the next handler, which can be another middleware in the chain, or the final handler.
 		next.ServeHTTP(w, r)
 	})
@@ -88,21 +92,11 @@ func postTodo(w http.ResponseWriter, r *http.Request) {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
-		"post", // name
-		false,  // durable
-		false,  // delete when unused
-		false,  // exclusive
-		false,  // no-wait
-		nil,    // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
 	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+		"",                          // exchange
+		os.Getenv(OutboundQueueVar), // routing key
+		false,                       // mandatory
+		false,                       // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        reqBody,
