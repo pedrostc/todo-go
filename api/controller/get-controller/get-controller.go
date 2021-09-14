@@ -101,24 +101,14 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
-		os.Getenv(InboundQueueVar), // name
-		false,                      // durable
-		false,                      // delete when unused
-		false,                      // exclusive
-		false,                      // no-wait
-		nil,                        // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
 	msgs, err := ch.Consume(
-		q.Name,           // queue
-		"get-controller", // consumer
-		true,             // auto-ack
-		false,            // exclusive
-		false,            // no-local
-		false,            // no-wait
-		nil,              // args
+		"amq.rabbitmq.reply-to", // queue
+		"get-controller",        // consumer
+		true,                    // auto-ack
+		false,                   // exclusive
+		false,                   // no-local
+		false,                   // no-wait
+		nil,                     // args
 	)
 	failOnError(err, "Failed to register a consumer")
 
@@ -132,20 +122,21 @@ func connectAndSend(id []byte) (res []byte, err error) {
 		amqp.Publishing{
 			ContentType:   "text/plain",
 			CorrelationId: corrId,
-			ReplyTo:       q.Name,
+			ReplyTo:       "amq.rabbitmq.reply-to",
 			Body:          id,
 		})
 	failOnError(err, "Failed to publish a message")
 
 	for d := range msgs {
 		if corrId == d.CorrelationId {
+			fmt.Println("Message received from DAO")
+
 			res = d.Body
 			break
 		}
 	}
 
 	return
-
 }
 
 func randomString(l int) string {
