@@ -17,22 +17,22 @@ const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
 
 func main() {
 	fmt.Printf("Starting the amazing API to get TODOs\n")
-	handleRequests()
+	setupApiRouter()
 }
 
-func handleRequests() {
+func setupApiRouter() {
 
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.HandleFunc("/todo", getTodos).Methods("GET")
-	router.HandleFunc("/todo/{id}", getSingleTodo).Methods("GET")
+	router.HandleFunc("/todo", listTodos).Methods("GET")
+	router.HandleFunc("/todo/{id}", retrieveTodo).Methods("GET")
 	router.HandleFunc("/todo/get/health", healthCheck).Methods("GET")
-	router.Use(loggingMiddleware)
+	router.Use(setupLoggingMiddleware)
 
 	log.Fatal(http.ListenAndServe(":10001", router))
 }
 
-func loggingMiddleware(next http.Handler) http.Handler {
+func setupLoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Do stuff here
 		log.Println(r.RequestURI)
@@ -42,7 +42,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func getTodos(w http.ResponseWriter, r *http.Request) {
+func listTodos(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
@@ -50,14 +50,19 @@ func getTodos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data, err := connectAndSend([]byte("0"))
-	failOnError(err, "daump")
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
-
+	w.Write(data)
 }
 
-func getSingleTodo(w http.ResponseWriter, r *http.Request) {
+func retrieveTodo(w http.ResponseWriter, r *http.Request) {
 
 	variables := mux.Vars(r)
 
@@ -68,11 +73,15 @@ func getSingleTodo(w http.ResponseWriter, r *http.Request) {
 
 	data, err := connectAndSend([]byte(variables["id"]))
 
-	failOnError(err, "daump")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err)
+
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(data)
-
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +139,6 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	for d := range msgs {
 		if corrId == d.CorrelationId {
 			fmt.Println("Message received from DAO")
-
 			res = d.Body
 			break
 		}
