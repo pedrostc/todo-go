@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -23,9 +22,9 @@ func main() {
 func setupApiRouter() {
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.Path("/todo").Methods(http.MethodGet).HandlerFunc(listTodos)
-	router.Path("/todo/{id}").Methods(http.MethodGet).HandlerFunc(retrieveTodo)
-	router.Path("/todo/get/health").Methods(http.MethodGet).HandlerFunc(healthCheck)
+	router.Path("/todo").Methods(http.MethodGet).HandlerFunc(listTodosHandler)
+	router.Path("/todo/{id}").Methods(http.MethodGet).HandlerFunc(retrieveTodoHandler)
+	router.Path("/todo/get/health").Methods(http.MethodGet).HandlerFunc(healthCheckHandler)
 
 	router.Use(setupLoggingMiddleware)
 
@@ -42,50 +41,35 @@ func setupLoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func listTodos(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
-		return
-	}
-
-	data, err := connectAndSend([]byte("0"))
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+func formatJsonResponse(w http.ResponseWriter, data []byte) {
 	w.Header().Add("Content-Type", "application/json")
 	w.Write(data)
 }
 
-func retrieveTodo(w http.ResponseWriter, r *http.Request) {
+func listTodosHandler(w http.ResponseWriter, r *http.Request) {
+	data, err := connectAndSend([]byte("0"))
 
-	variables := mux.Vars(r)
-
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	formatJsonResponse(w, data)
+}
+
+func retrieveTodoHandler(w http.ResponseWriter, r *http.Request) {
+	variables := mux.Vars(r)
 	data, err := connectAndSend([]byte(variables["id"]))
 
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(err)
-
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(data)
+	formatJsonResponse(w, data)
 }
 
-func healthCheck(w http.ResponseWriter, r *http.Request) {
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method is not supported.", http.StatusMethodNotAllowed)
@@ -103,12 +87,21 @@ func failOnError(err error, msg string) {
 
 func connectAndSend(id []byte) (res []byte, err error) {
 
+	// INJECT BY ENV VAR
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
-	failOnError(err, "Failed to connect to RabbitMQ")
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the message broker: %w", err)
+	}
+
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to open channel for message broker connection: %w", err)
+	}
+
 	defer ch.Close()
 
 	msgs, err := ch.Consume(
@@ -120,7 +113,10 @@ func connectAndSend(id []byte) (res []byte, err error) {
 		false,                   // no-wait
 		nil,                     // args
 	)
-	failOnError(err, "Failed to register a consumer")
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to register the reply queue consumer: %w", err)
+	}
 
 	corrId := randomString(32)
 
@@ -135,7 +131,10 @@ func connectAndSend(id []byte) (res []byte, err error) {
 			ReplyTo:       "amq.rabbitmq.reply-to",
 			Body:          id,
 		})
-	failOnError(err, "Failed to publish a message")
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to publish the message to the queue: %w", err)
+	}
 
 	for d := range msgs {
 		if corrId == d.CorrelationId {
