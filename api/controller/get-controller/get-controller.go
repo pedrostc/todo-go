@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -13,6 +14,17 @@ import (
 
 const InboundQueueVar = "INBOUND_QUEUE_NAME"
 const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
+
+type Result struct {
+	Err    string
+	Result string // result in json
+}
+
+type Todo struct {
+	Id   string
+	Text string
+	Done bool
+}
 
 func main() {
 	fmt.Printf("Starting the amazing API to get TODOs\n")
@@ -139,7 +151,20 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	for d := range msgs {
 		if corrId == d.CorrelationId {
 			fmt.Println("Message received from DAO")
-			res = d.Body
+			fmt.Printf("%#v \n", d)
+
+			var data *Result
+			err := json.Unmarshal(d.Body, &data)
+
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse the message returned by the DAO: %w", err)
+			}
+
+			if data.Err != "" {
+				return nil, fmt.Errorf("DAO error: %w", data.Err)
+			}
+
+			res = []byte(data.Result)
 			break
 		}
 	}

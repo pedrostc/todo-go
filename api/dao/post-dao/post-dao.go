@@ -23,9 +23,8 @@ var ctx = context.TODO()
 const inboudQueueNameVar = "INBOUND_QUEUE_NAME"
 
 type Todo struct {
-	Id   string
 	Text string
-	Done string
+	Done bool
 }
 
 func init() {

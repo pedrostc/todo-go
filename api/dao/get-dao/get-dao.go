@@ -9,6 +9,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -23,9 +24,14 @@ var collection *mongo.Collection
 var ctx = context.TODO()
 
 type Todo struct {
-	Id   string `bson:"id"`
+	Id   string `bson:"_id"`
 	Text string `bson:"text"`
-	Done string `bson:"done"`
+	Done bool   `bson:"done"`
+}
+
+type Result struct {
+	Err    string
+	Result string // result in json
 }
 
 type SvcConfiguration struct {
@@ -59,7 +65,6 @@ func main() {
 
 	var c SvcConfiguration
 	err := envconfig.Process("getdao", &c)
-
 	failOnError(err, "There was a problem loading the service configs.")
 
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
@@ -103,22 +108,35 @@ func main() {
 	go func() {
 		for d := range msgs {
 			log.Println("Message received")
-			log.Println(d)
+			log.Printf("%#v \n", d)
 
 			id := string(d.Body)
-			failOnError(err, "Failed to convert id to integer")
 
-			var response []byte
+			var data []byte
 
 			if id == "0" {
-				response, err = getTodos()
-				failOnError(err, "Failed to retrieve the to-do items from the DB.")
+				data, err = getTodos()
 			} else {
-				response, err = getTodo(id)
-				failOnError(err, fmt.Sprint("Failed to retrieve the to-do item with ID %v from the DB.", id))
+				data, err = getTodo(id)
 			}
 
-			failOnError(err, "Failed to convert the DB result to json.")
+			errorMsg := ""
+			if err != nil {
+				fmt.Println("Failed to retrieve the requested items:", err)
+				errorMsg = err.Error()
+			}
+
+			result := Result{errorMsg, string(data)}
+
+			fmt.Printf("%#v", result)
+
+			response, err := json.Marshal(result)
+
+			if err != nil {
+				fmt.Println("Failed to parse the result to JSON:", err)
+			} else {
+				fmt.Printf("data to send: %q \n", response)
+			}
 
 			err = ch.Publish(
 				"",        // exchange
@@ -130,7 +148,10 @@ func main() {
 					CorrelationId: d.CorrelationId,
 					Body:          response,
 				})
-			failOnError(err, "Failed to publish a message")
+
+			if err != nil {
+				fmt.Println("Failed to publish the response message:", err)
+			}
 
 			d.Ack(false)
 		}
@@ -174,11 +195,19 @@ func getTodos() ([]byte, error) {
 func getTodo(id string) ([]byte, error) {
 	var todo Todo
 
-	filter := bson.M{"id": id}
-
-	err := collection.FindOne(ctx, filter).Decode(&todo)
+	objId, err := primitive.ObjectIDFromHex(id)
 
 	if err != nil {
+		return nil, err
+	}
+
+	filter := bson.M{"_id": objId}
+
+	err = collection.FindOne(ctx, filter).Decode(&todo)
+
+	if err == mongo.ErrNoDocuments {
+		todo = Todo{}
+	} else if err != nil {
 		return nil, err
 	}
 
