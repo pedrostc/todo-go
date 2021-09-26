@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
@@ -106,12 +105,12 @@ func main() {
 			log.Println("Message received")
 			log.Println(d)
 
-			id, err := strconv.Atoi(string(d.Body))
+			id := string(d.Body)
 			failOnError(err, "Failed to convert id to integer")
 
 			var response []byte
 
-			if id == 0 {
+			if id == "0" {
 				response, err = getTodos()
 				failOnError(err, "Failed to retrieve the to-do items from the DB.")
 			} else {
@@ -172,10 +171,12 @@ func getTodos() ([]byte, error) {
 	return json, nil
 }
 
-func getTodo(id int) ([]byte, error) {
+func getTodo(id string) ([]byte, error) {
 	var todo Todo
 
-	err := collection.FindOne(ctx, bson.D{{"id", id}}).Decode(&todo)
+	filter := bson.M{"id": id}
+
+	err := collection.FindOne(ctx, filter).Decode(&todo)
 
 	if err != nil {
 		return nil, err
