@@ -26,6 +26,10 @@ type Todo struct {
 	Done bool
 }
 
+func (todo Todo) isEmpty() bool {
+	return todo.Id == "" && todo.Text == ""
+}
+
 func main() {
 	fmt.Printf("Starting the amazing API to get TODOs\n")
 	setupApiRouter()
@@ -58,6 +62,14 @@ func formatJsonResponse(w http.ResponseWriter, data []byte) {
 	w.Write(data)
 }
 
+func validateResponse(data []byte) bool {
+
+	var todoJson Todo
+	json.Unmarshal(data, &todoJson)
+
+	return !todoJson.isEmpty()
+}
+
 func listTodosHandler(w http.ResponseWriter, r *http.Request) {
 	data, err := connectAndSend([]byte("0"))
 
@@ -66,7 +78,12 @@ func listTodosHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatJsonResponse(w, data)
+	if data != nil {
+		formatJsonResponse(w, data)
+	} else {
+		formatJsonResponse(w, []byte("[]"))
+	}
+
 }
 
 func retrieveTodoHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,7 +95,11 @@ func retrieveTodoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	formatJsonResponse(w, data)
+	if validateResponse(data) {
+		formatJsonResponse(w, data)
+	} else {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	}
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
