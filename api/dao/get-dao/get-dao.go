@@ -9,7 +9,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -24,7 +23,7 @@ var collection *mongo.Collection
 var ctx = context.TODO()
 
 type Todo struct {
-	Id   string `bson:"_id"`
+	Id   string `bson:"id"`
 	Text string `bson:"text"`
 	Done bool   `bson:"done"`
 }
@@ -195,15 +194,9 @@ func getTodos() ([]byte, error) {
 func getTodo(id string) ([]byte, error) {
 	var todo Todo
 
-	objId, err := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"id": id}
 
-	if err != nil {
-		return nil, err
-	}
-
-	filter := bson.M{"_id": objId}
-
-	err = collection.FindOne(ctx, filter).Decode(&todo)
+	err := collection.FindOne(ctx, filter).Decode(&todo)
 
 	if err == mongo.ErrNoDocuments {
 		todo = Todo{}

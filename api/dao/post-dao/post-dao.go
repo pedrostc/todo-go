@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -23,6 +25,7 @@ var ctx = context.TODO()
 const inboudQueueNameVar = "INBOUND_QUEUE_NAME"
 
 type Todo struct {
+	Id   string
 	Text string
 	Done bool
 }
@@ -88,8 +91,14 @@ func main() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 
+			newUuid := uuid.New().String()
+			fmt.Printf("uuid: %s", newUuid)
+			fmt.Println("If you can read this, something is right and something else is wrong. Good luck.")
+
 			var todoJson Todo
 			json.Unmarshal(d.Body, &todoJson)
+
+			todoJson.Id = newUuid
 			err = insertTodo(todoJson)
 			if err != nil {
 				log.Println(err)

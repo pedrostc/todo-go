@@ -16,13 +16,12 @@ import (
 const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
 
 type Todo struct {
-	Id   string
 	Text string
 	Done string
 }
 
 func (todo Todo) isEmpty() bool {
-	return todo.Id == "" && todo.Text == "" && todo.Done == ""
+	return todo.Text == "" && todo.Done == ""
 }
 
 func main() {
