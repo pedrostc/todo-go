@@ -78,12 +78,7 @@ func listTodosHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if data != nil {
-		formatJsonResponse(w, data)
-	} else {
-		formatJsonResponse(w, []byte("[]"))
-	}
-
+	formatJsonResponse(w, data)
 }
 
 func retrieveTodoHandler(w http.ResponseWriter, r *http.Request) {
