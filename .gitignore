@@ -30,4 +30,7 @@
 !.vscode/extensions.json
 *.code-workspace
 
+### rabbitmq ###
+rabbitmq/*
+
 # End of https://www.toptal.com/developers/gitignore/api/vscode,go
