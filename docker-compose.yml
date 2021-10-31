@@ -16,13 +16,23 @@ services:
     get-todo:
         build: ./api/controller/get-controller
         environment:
-            INBOUND_QUEUE_NAME: get-lalala
-            OUTBOUND_QUEUE_NAME: get
+            GET_INBOUNDQUEUENAME: amq.rabbitmq.reply-to
+            GET_OUTBOUNDQUEUENAME: get
         depends_on: 
             rabbitmq:
                 condition: service_healthy
         networks:
             - todo            
+    patch-todo:
+        build: ./api/controller/patch-controller
+        environment:
+            INBOUND_QUEUE_NAME: patch-lalala
+            OUTBOUND_QUEUE_NAME: patch
+        depends_on: 
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo               
     post-dao:
         build: ./api/dao/post-dao
         environment:
@@ -53,7 +63,7 @@ services:
             rabbitmq:
                 condition: service_healthy
         networks:
-            - todo            
+            - todo 
     rabbitmq:
         image: rabbitmq:3-management-alpine
         volumes:

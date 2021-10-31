@@ -6,14 +6,19 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 )
 
 const InboundQueueVar = "INBOUND_QUEUE_NAME"
 const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
+
+type SvcConfiguration struct {
+	InboundQueueName  string
+	OutboundQueueName string
+}
 
 type Result struct {
 	Err    string
@@ -115,6 +120,10 @@ func failOnError(err error, msg string) {
 
 func connectAndSend(id []byte) (res []byte, err error) {
 
+	var c SvcConfiguration
+	err = envconfig.Process("get", &c)
+	failOnError(err, "There was a problem loading the service configs.")
+
 	// INJECT BY ENV VAR
 	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
 
@@ -133,13 +142,13 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	defer ch.Close()
 
 	msgs, err := ch.Consume(
-		"amq.rabbitmq.reply-to", // queue
-		"get-controller",        // consumer
-		true,                    // auto-ack
-		false,                   // exclusive
-		false,                   // no-local
-		false,                   // no-wait
-		nil,                     // args
+		c.InboundQueueName, // queue
+		"get-controller",   // consumer
+		true,               // auto-ack
+		false,              // exclusive
+		false,              // no-local
+		false,              // no-wait
+		nil,                // args
 	)
 
 	if err != nil {
@@ -149,14 +158,14 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	corrId := randomString(32)
 
 	err = ch.Publish(
-		"",                          // exchange
-		os.Getenv(OutboundQueueVar), // routing key
-		false,                       // mandatory
-		false,                       // immediate
+		"",                  // exchange
+		c.OutboundQueueName, // routing key
+		false,               // mandatory
+		false,               // immediate
 		amqp.Publishing{
 			ContentType:   "text/plain",
 			CorrelationId: corrId,
-			ReplyTo:       "amq.rabbitmq.reply-to",
+			ReplyTo:       c.InboundQueueName,
 			Body:          id,
 		})
 
