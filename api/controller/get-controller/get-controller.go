@@ -12,12 +12,17 @@ import (
 	"github.com/streadway/amqp"
 )
 
-const InboundQueueVar = "INBOUND_QUEUE_NAME"
-const OutboundQueueVar = "OUTBOUND_QUEUE_NAME"
-
 type SvcConfiguration struct {
-	InboundQueueName  string
-	OutboundQueueName string
+	InboundQueueName  string `required:"true"`
+	OutboundQueueName string `required:"true"`
+	RabbitMqServer    string `required:"true"`
+	RabbitMqPort      string `default:"5672"`
+	RabbitMqUser      string `required:"true"`
+	RabbitMqPswd      string `required:"true"`
+}
+
+func (c *SvcConfiguration) GetRabbitConnString() string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%s/", c.RabbitMqUser, c.RabbitMqPswd, c.RabbitMqServer, c.RabbitMqPort)
 }
 
 type Result struct {
@@ -125,7 +130,7 @@ func connectAndSend(id []byte) (res []byte, err error) {
 	failOnError(err, "There was a problem loading the service configs.")
 
 	// INJECT BY ENV VAR
-	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
+	conn, err := amqp.Dial(c.GetRabbitConnString())
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the message broker: %w", err)

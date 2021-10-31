@@ -18,6 +18,10 @@ services:
         environment:
             GET_INBOUNDQUEUENAME: amq.rabbitmq.reply-to
             GET_OUTBOUNDQUEUENAME: get
+            GET_RABBITMQSERVER: rabbitmq
+            GET_RABBITMQPORT: 5672
+            GET_RABBITMQUSER: guest
+            GET_RABBITMQPSWD: guest
         depends_on: 
             rabbitmq:
                 condition: service_healthy
