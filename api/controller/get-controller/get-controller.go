@@ -7,23 +7,12 @@ import (
 	"math/rand"
 	"net/http"
 
+	config "get-todo/serviceconfig"
+
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/streadway/amqp"
 )
-
-type SvcConfiguration struct {
-	InboundQueueName  string `required:"true"`
-	OutboundQueueName string `required:"true"`
-	RabbitMqServer    string `required:"true"`
-	RabbitMqPort      string `default:"5672"`
-	RabbitMqUser      string `required:"true"`
-	RabbitMqPswd      string `required:"true"`
-}
-
-func (c *SvcConfiguration) GetRabbitConnString() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%s/", c.RabbitMqUser, c.RabbitMqPswd, c.RabbitMqServer, c.RabbitMqPort)
-}
 
 type Result struct {
 	Err    string
@@ -125,7 +114,7 @@ func failOnError(err error, msg string) {
 
 func connectAndSend(id []byte) (res []byte, err error) {
 
-	var c SvcConfiguration
+	var c config.ServiceConfig
 	err = envconfig.Process("get", &c)
 	failOnError(err, "There was a problem loading the service configs.")
 
