@@ -68,6 +68,22 @@ services:
                 condition: service_healthy
         networks:
             - todo 
+    patch-dao:
+        build: ./api/dao/patch-dao    
+        environment:
+            PATCHDAO_INBOUNDQUEUENAME: patch
+            PATCHDAO_OUTBOUNDQUEUENAME: patch
+        deploy:
+            restart_policy:
+                condition: always
+                delay: 1s
+        depends_on: 
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo                        
     rabbitmq:
         image: rabbitmq:3-management-alpine
         volumes:
