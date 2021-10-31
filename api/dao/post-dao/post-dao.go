@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
@@ -92,8 +91,6 @@ func main() {
 			log.Printf("Received a message: %s", d.Body)
 
 			newUuid := uuid.New().String()
-			fmt.Printf("uuid: %s", newUuid)
-			fmt.Println("If you can read this, something is right and something else is wrong. Good luck.")
 
 			var todoJson Todo
 			json.Unmarshal(d.Body, &todoJson)
