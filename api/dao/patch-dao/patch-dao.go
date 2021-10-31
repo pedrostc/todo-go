@@ -26,8 +26,8 @@ const inboudQueueNameVar = "INBOUND_QUEUE_NAME"
 
 type Todo struct {
 	Id   string
-	Text string `json:"text,omitempty"`
-	Done bool   `json:"done,omitempty"`
+	Text string
+	Done bool
 }
 
 type Result struct {
@@ -167,7 +167,9 @@ func updateTodo(updatedTodo Todo) ([]byte, error) {
 
 	err := collection.FindOne(ctx, filter).Decode(&todo)
 
-	if err != nil {
+	if err == mongo.ErrNoDocuments {
+		todo = Todo{}
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -180,6 +182,7 @@ func updateTodo(updatedTodo Todo) ([]byte, error) {
 		return nil, err
 	}
 
+	//TODO: Handle return for ReplaceOne in the case of object not found
 	json, err := json.Marshal(todo)
 
 	if err != nil {
