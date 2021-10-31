@@ -36,10 +36,11 @@ func main() {
 
 func setupApiRouter() {
 	router := mux.NewRouter().StrictSlash(true)
+	getTodoRouter := router.PathPrefix("/todo").Methods(http.MethodGet).Subrouter()
 
-	router.Path("/todo").Methods(http.MethodGet).HandlerFunc(listTodosHandler)
-	router.Path("/todo/{id}").Methods(http.MethodGet).HandlerFunc(retrieveTodoHandler)
-	router.Path("/todo/get/health").Methods(http.MethodGet).HandlerFunc(healthCheckHandler)
+	getTodoRouter.Path("/").HandlerFunc(listTodosHandler)
+	getTodoRouter.Path("/{id}").HandlerFunc(retrieveTodoHandler)
+	getTodoRouter.Path("/get/health").HandlerFunc(healthCheckHandler)
 
 	router.Use(setupLoggingMiddleware)
 
