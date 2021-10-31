@@ -8,10 +8,10 @@ import (
 	"net/http"
 
 	config "get-todo/serviceconfig"
+	services "get-todo/services"
 
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/streadway/amqp"
 )
 
 type Result struct {
@@ -25,7 +25,7 @@ type Todo struct {
 	Done bool
 }
 
-func (todo Todo) isEmpty() bool {
+func (todo *Todo) isEmpty() bool {
 	return todo.Id == "" && todo.Text == ""
 }
 
@@ -106,68 +106,27 @@ func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "We're good to go.")
 }
 
-func failOnError(err error, msg string) {
-	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
-	}
-}
-
 func connectAndSend(id []byte) (res []byte, err error) {
 
+	// move to main init or.... main methods/ and inject them here.
 	var c config.ServiceConfig
 	err = envconfig.Process("get", &c)
-	failOnError(err, "There was a problem loading the service configs.")
-
-	// INJECT BY ENV VAR
-	conn, err := amqp.Dial(c.GetRabbitConnString())
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the message broker: %w", err)
-	}
-
-	defer conn.Close()
-
-	ch, err := conn.Channel()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to open channel for message broker connection: %w", err)
-	}
-
-	defer ch.Close()
-
-	msgs, err := ch.Consume(
-		c.InboundQueueName, // queue
-		"get-controller",   // consumer
-		true,               // auto-ack
-		false,              // exclusive
-		false,              // no-local
-		false,              // no-wait
-		nil,                // args
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to register the reply queue consumer: %w", err)
+		return nil, fmt.Errorf("there was a problem loading the service configs: %w", err)
 	}
 
 	corrId := randomString(32)
 
-	err = ch.Publish(
-		"",                  // exchange
-		c.OutboundQueueName, // routing key
-		false,               // mandatory
-		false,               // immediate
-		amqp.Publishing{
-			ContentType:   "text/plain",
-			CorrelationId: corrId,
-			ReplyTo:       c.InboundQueueName,
-			Body:          id,
-		})
+	rabbit := &services.RabbitQueue{Config: c}
+	consumer, err := rabbit.PublishAndListen(id, corrId)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to publish the message to the queue: %w", err)
+		return nil, fmt.Errorf("there was a problem sending a request to the DAL: %w", err)
 	}
 
-	for d := range msgs {
+	defer rabbit.Close()
+
+	for d := range consumer {
 		if corrId == d.CorrelationId {
 			fmt.Println("Message received from DAO")
 			fmt.Printf("%#v \n", d)

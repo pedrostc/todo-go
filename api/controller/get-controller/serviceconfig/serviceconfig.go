@@ -9,6 +9,7 @@ type ServiceConfig struct {
 	RabbitMqPort      string `default:"5672"`
 	RabbitMqUser      string `required:"true"`
 	RabbitMqPswd      string `required:"true"`
+	ConsumerName      string `default:"get-todo"`
 }
 
 func (c *ServiceConfig) GetRabbitConnString() string {
