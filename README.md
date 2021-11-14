@@ -31,3 +31,4 @@ docker compose up -d --force-recreate --no-deps --build patch-todo
 
 ELK:
  docker compose -f .\docker-compose.elk.yml up -d
+ Elastic search may fail to start due to memory constraints. To fix that you can run `sudo sysctl -w vm.max_map_count=262144` on your linux host (or wsl backe bash)
