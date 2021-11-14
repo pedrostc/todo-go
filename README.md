@@ -20,3 +20,14 @@ docker:
 - db
 - queue system
 - one testing endpoint (get)
+
+## Running
+
+Main stack:
+docker compose up
+
+Restart service:
+docker compose up -d --force-recreate --no-deps --build patch-todo
+
+ELK:
+ docker compose -f .\docker-compose.elk.yml up -d
