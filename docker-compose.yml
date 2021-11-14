@@ -36,22 +36,17 @@ services:
             rabbitmq:
                 condition: service_healthy
         networks:
-            - todo               
-    post-dao:
-        build: ./api/dao/post-dao
+            - todo    
+    delete-todo:
+        build: ./api/controller/delete-controller
         environment:
-            INBOUND_QUEUE_NAME: post
-        deploy:
-            restart_policy:
-                condition: always
-                delay: 3s
+            INBOUND_QUEUE_NAME: delete-lalala
+            OUTBOUND_QUEUE_NAME: delete
         depends_on: 
-            mongo:
-                condition: service_healthy
             rabbitmq:
                 condition: service_healthy
         networks:
-            - todo
+            - todo                          
     get-dao:
         build: ./api/dao/get-dao    
         environment:
@@ -67,7 +62,22 @@ services:
             rabbitmq:
                 condition: service_healthy
         networks:
-            - todo 
+            - todo                     
+    post-dao:
+        build: ./api/dao/post-dao
+        environment:
+            INBOUND_QUEUE_NAME: post
+        deploy:
+            restart_policy:
+                condition: always
+                delay: 3s
+        depends_on: 
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo            
     patch-dao:
         build: ./api/dao/patch-dao    
         environment:
@@ -83,7 +93,23 @@ services:
             rabbitmq:
                 condition: service_healthy
         networks:
-            - todo                        
+            - todo    
+    delete-dao:
+        build: ./api/dao/delete-dao    
+        environment:
+            DELETEDAO_INBOUNDQUEUENAME: delete
+            DELETEAO_OUTBOUNDQUEUENAME: delete
+        deploy:
+            restart_policy:
+                condition: always
+                delay: 1s
+        depends_on: 
+            mongo:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+        networks:
+            - todo                            
     rabbitmq:
         image: rabbitmq:3-management-alpine
         volumes:
