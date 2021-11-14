@@ -102,4 +102,5 @@ func postTodo(w http.ResponseWriter, r *http.Request) {
 		})
 	failOnError(err, "Failed to publish a message")
 
+	w.WriteHeader(http.StatusCreated)
 }

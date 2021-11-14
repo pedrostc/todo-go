@@ -173,6 +173,7 @@ func updateTodo(updatedTodo Todo) ([]byte, error) {
 		return nil, err
 	}
 
+	todo.Id = updatedTodo.Id
 	todo.Text = updatedTodo.Text
 	todo.Done = updatedTodo.Done
 
